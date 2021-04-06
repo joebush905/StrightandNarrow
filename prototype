@@ -140,6 +140,7 @@ x = 80
 y = 78
 dist = ultrasonic_distance.mm()
 while True:
+    enc.clear_count()
     while dist > 200:
         motor_left.set_forwards()
         motor_right.set_forwards()
@@ -159,7 +160,6 @@ while True:
         dist = ultrasonic_distance.mm()
     while dist < 200:
         c = ClicksNeeded(pi/2)
-        enc.clear_count()
         a = enc.get_left()
         b = enc.get_right()
         if a+b < 2c:
@@ -174,5 +174,3 @@ while True:
             motor_right.duty(0)
             sleep(0.1)
             dist = ultrasonic_distance.mm()
-
-
