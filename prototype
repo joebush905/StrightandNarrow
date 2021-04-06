@@ -1,0 +1,178 @@
+class Motor(object):
+    import motor
+
+    def init(self, side, in1_pin, in2_pin, en_pin):
+        from pyb import Timer
+        from machine import Pin
+
+        self.side = side
+        print("Initialising", self.side, "motor...")
+        self.IN1 = Pin(in1_pin, Pin.OUT)
+        self.IN2 = Pin(in2_pin, Pin.OUT)
+        self.EN = Pin(en_pin)
+
+        if en_pin == "D4":
+            _tim = 3
+            _channel = 2
+        elif en_pin == "D5":
+            _tim = 3
+            _channel = 1
+
+        self.tim = Timer(_tim, freq=20000)  # Frequency at 20kHz to be outside human hearing
+        self.ch = self.tim.channel(_channel, Timer.PWM, pin=self.EN)
+        print("Motor", self.side, "initialised!")
+
+    def duty(self, pwm):
+        self.ch.pulse_width_percent(pwm)
+
+    def set_forwards(self):
+        if self.side == "left":
+            self.IN1.on()
+            self.IN2.off()
+        else:  # only other motor is the right motor
+            self.IN1.off()
+            self.IN2.on()
+
+    def set_backwards(self):
+        if self.side == "left":
+            self.IN1.off()
+            self.IN2.on()
+        else:
+            self.IN1.on()
+            self.IN2.off()
+
+class Encoder(object):
+    def __init__(self, pin_left, pin_right):
+        from machine import Pin
+        self.forward = True
+        self.pin_left = Pin(pin_left, Pin.IN)
+        self.pin_right = Pin(pin_right, Pin.IN)
+        self._count_left = 0
+        self._count_right = 0
+        self.left_interrupt = self.pin_left.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.left_callback)
+        self.right_interrupt = self.pin_right.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self.right_callback)
+
+    # Callback functions are used to `handle' desired operations immediately,
+    # whenever a rising/falling edge triggers an `interrupt'
+    def left_callback(self, line):
+        # Add or subtract 1 from the left encoder count based on direction
+        self._count_left += 1 if self.forward else -1
+
+    def right_callback(self, line):
+        # Add or subtract 1 from the right encoder count based on direction
+        self._count_right += 1 if self.forward else -1
+
+    def get_left(self):
+        return self._count_left
+
+    def get_right(self):
+        return self._count_right
+
+    def clear_count(self):
+        # Reset the counts of both encoders to zero
+        self._count_left = 0
+        self._count_right = 0
+
+class HCSR04:
+
+    def init(self, trigger_pin, echo_pin, echo_timeout_us=40002/(340.291e-3)):
+        """
+        - trigger_pin: Output pin to send pulses
+        - echo_pin: Input pin listens for reflection to estimate time of flight.
+        - echo_timeout_us: Timeout in microseconds to listen to echo pin.
+        By default the timeout is set to the max range limit of the sensor, 4m
+        """
+        # Initialise constants
+        self.echo_timeout_us = int(echo_timeout_us)
+        self.speed_sound = 340.29  # m/s
+
+        # Initialise the TRIG output pin
+        self.trigger = Pin(trigger_pin, mode=Pin.OUT)
+        self.trigger.value(0)
+
+        # Initialise the ECHO input pin
+        self.echo = Pin(echo_pin, mode=Pin.IN)
+
+    def distance_mm(self):
+        """
+        Estimate distance to obstacle in front of the ultrasonic sensor in mm.
+        Sends a 10us pulse to 'trigger' pin and listens on 'echo' pin.
+        We use the method machine.time_pulse_us() to count the microseconds
+        passed before the echo is received.
+        The time of flight is used to calculate the estimated distance.
+        """
+        # Send a 10us HIGH pulse to trigger the ultrasonic burst
+        self.trigger.value(1)
+        time.sleep(0.01)
+        self.trigger.value(0)
+        # Read length of time pulse
+        duration = machine.time_pulse_us(self.echo, 1, self.echo_timeout_us)
+        # Calculate the distance in mm, based on the delay before we hear
+        # an echo and the constant speed of sound.
+        # Note: duration is halved as the audio wave must travel there and back.
+        mm = 0.5 * duration * 1e-6 * self.speed_sound * 1e3
+        return mm
+
+from machine import Pin
+import time
+from motor import Motor
+from encoder import Encoder
+from time import sleep
+import ultrasonic
+from math import pi
+motor_left = Motor("left", "D6", "D7", "D4")
+motor_right = Motor("right", "D5", "D8", "D9")
+enc = Encoder(ENC_L, ENC_R)
+TRIG = "D13"
+ECHO = "D12"
+ultrasonic_sensor = ultrasonic.HCSR04(TRIG, ECHO)
+
+def ClicksNeeded(angle):
+    WheelDiameter = 65  ##diameter in mm
+    WheelBase = 140  ##wheel base in mm
+    AngelTurn = pi / 2  # defines the angle we want to turn
+    TurningRadius = WheelBase / 2
+    c = WheelDiameter * pi
+    l = AngelTurn * TurningRadius
+    total = (l/c)*20
+    return round(total)
+x = 80
+y = 78
+dist = ultrasonic_distance.mm()
+while True:
+    while dist > 200:
+        motor_left.set_forwards()
+        motor_right.set_forwards()
+        motor_left.duty(x)
+        motor_right.duty(y) ##approx straight from graph produced from workshop
+        sleep(0.1)
+        a = enc.get_left()
+        b = enc.get_right()
+        if a > b: #turning right
+            x = x - 1
+            y = y + 1
+        elif b > a: #turning left
+            x = x + 1
+            y = y - 1
+        else:
+            sleep(0.1)
+        dist = ultrasonic_distance.mm()
+    while dist < 200:
+        c = ClicksNeeded(pi/2)
+        enc.clear_count()
+        a = enc.get_left()
+        b = enc.get_right()
+        if a+b < 2c:
+            motor_left.set_backwards()      # assumed that they still turn the same rate
+            motor_right.set_forwards()
+            motor_left.duty(x)
+            motor_right.duty(y)
+            a = enc.get_left()
+            b = enc.get_right()
+        else:
+            motor_left.duty(0)
+            motor_right.duty(0)
+            sleep(0.1)
+            dist = ultrasonic_distance.mm()
+
+
