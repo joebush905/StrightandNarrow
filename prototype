@@ -130,7 +130,7 @@ ultrasonic_sensor = ultrasonic.HCSR04(TRIG, ECHO)
 def ClicksNeeded(angle):
     WheelDiameter = 65  ##diameter in mm
     WheelBase = 140  ##wheel base in mm
-    AngelTurn = pi / 2  # defines the angle we want to turn
+    AngelTurn = angle * pi/180  # defines the angle we want to turn
     TurningRadius = WheelBase / 2
     c = WheelDiameter * pi
     l = AngelTurn * TurningRadius
