@@ -122,6 +122,8 @@ import ultrasonic
 from math import pi
 motor_left = Motor("left", "D6", "D7", "D4")
 motor_right = Motor("right", "D5", "D8", "D9")
+ENC_L = "D2"
+ENC_R = "D3"
 enc = Encoder(ENC_L, ENC_R)
 TRIG = "D13"
 ECHO = "D12"
@@ -159,7 +161,8 @@ while True:
             sleep(0.1)
         dist = ultrasonic_distance.mm()
     while dist < 200:
-        c = ClicksNeeded(pi/2)
+        enc.clear_count()
+        c = ClicksNeeded(90)
         a = enc.get_left()
         b = enc.get_right()
         if a+b < 2c:
