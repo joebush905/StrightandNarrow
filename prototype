@@ -5,12 +5,12 @@ import ultrasonic
 from math import pi
 
 motor_left = Motor("left", "D6", "D7", "D4")
-motor_right = Motor("right", "D9", "D8", "D5")
+motor_right = Motor("right", "D8", "D9", "D5")
 ENC_L = "D2"
 ENC_R = "D3"
 enc = Encoder(ENC_L, ENC_R)
-TRIG = "D10"
-ECHO = "D11"
+TRIG = "D11"
+ECHO = "D10"
 ultrasonic_sensor = ultrasonic.HCSR04(TRIG, ECHO)
 
 
@@ -28,47 +28,50 @@ def clicksneeded(angle):
     return round(total)
 
 
-x = 80
-y = 78
+LPWM = 66
+RPWM = 68
 dist = ultrasonic_sensor.distance_mm()
+print(dist)
 while True:
     enc.clear_count()
     while dist > 200:
         motor_left.set_forwards()
         motor_right.set_forwards()
-        motor_left.duty(x)
-        motor_right.duty(y)  # approx straight from graph produced from workshop
-        sleep(0.1)
-        a = enc.get_left()
-        b = enc.get_right()
-        if a > b:  # turning right
-            x += -1
-            y += 1
+        motor_left.duty(LPWM)
+        motor_right.duty(RPWM)  # approx straight from graph produced from workshop
+        # LPWM = 66
+        RPWM = 68
+        Lenc = enc.get_left()
+        Renc = enc.get_right()
+        while 60 < LPWM < 70:
+            if Renc > Lenc:  # turning left
+                LPWM += -0.5
+                sleep(0.1)
 
-        elif b > a:  # turning left
-            x = x + 1
-            y = y - 1
-        else:
-            sleep(0.1)
-        print(x, y)
-    dist = ultrasonic_sensor.distance_mm()
+            elif Lenc > Renc:  # turning right
+                LPWM += 0.5
+                sleep(0.1)
+            else:
+                sleep(0.1)
+            print(LPWM, RPWM)
+            dist = ultrasonic_sensor.distance_mm()
     while dist < 200:
         motor_left.duty(0)
         motor_right.duty(0)
         enc.clear_count()
         motor_left.set_backwards()  # assumed that they still turn the same rate
         motor_right.set_forwards()
-        motor_left.duty(x)
-        motor_right.duty(y)
-        sleep(0.1)
+        motor_left.duty(LPWM)
+        motor_right.duty(RPWM)
+        sleep(0.5)
         c = clicksneeded(90)
-        a = enc.get_left()
-        b = enc.get_right()
-        if a+b < 2*c:
+        d = enc.get_left()
+        e = enc.get_right()
+        if d+e < 2*c:
             a = enc.get_left()
             b = enc.get_right()
         else:
             motor_left.duty(0)
             motor_right.duty(0)
             sleep(0.1)
-            dist = ultrasonic_sensor.distance_mm()
+        dist = ultrasonic_sensor.distance_mm()
