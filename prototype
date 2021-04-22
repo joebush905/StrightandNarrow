@@ -28,7 +28,7 @@ def clicksneeded(angle):
     return round(total)
 
 
-LPWM = 66
+LPWM = 70
 RPWM = 68
 dist = ultrasonic_sensor.distance_mm()
 print(dist)
@@ -40,21 +40,30 @@ while True:
         motor_left.duty(LPWM)
         motor_right.duty(RPWM)  # approx straight from graph produced from workshop
         # LPWM = 66
-        RPWM = 68
+        # RPWM = 68
         Lenc = enc.get_left()
         Renc = enc.get_right()
-        while 60 < LPWM < 70:
-            if Renc > Lenc:  # turning left
-                LPWM += -0.5
-                sleep(0.1)
-
-            elif Lenc > Renc:  # turning right
-                LPWM += 0.5
-                sleep(0.1)
+        # while 60 < LPWM < 70:
+        if Renc > Lenc:  # turning left
+            if LPWM > 65:
+                LPWM += -0.1
             else:
-                sleep(0.1)
-            print(LPWM, RPWM)
-            dist = ultrasonic_sensor.distance_mm()
+                RPWM += 0.1
+            sleep(0.1)
+            Lenc = enc.get_left()
+            Renc = enc.get_right()
+        elif Lenc > Renc:  # turning right
+            if LPWM < 95:
+                LPWM += 0.1
+            else:
+                RPWM += -0.1
+            sleep(0.1)
+        else:
+            sleep(0.1)
+            Lenc = enc.get_left()
+            Renc = enc.get_right()
+        print(LPWM, RPWM)
+        dist = ultrasonic_sensor.distance_mm()
     while dist < 200:
         motor_left.duty(0)
         motor_right.duty(0)
