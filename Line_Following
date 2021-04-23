@@ -1,0 +1,50 @@
+from pyb import Pin, ADC
+from motor import Motor
+import time
+
+motor_left = Motor("left", "D6", "D7", "D4")
+motor_right = Motor("right", "D8", "D9", "D5")
+LPWM = 75
+RPWM = 73
+IR_SensorL = ADC(Pin('A2'))
+IR_SensorR = ADC(Pin('A3'))
+LReading = 0
+RReading = 0
+while True:
+    motor_left.set_forwards()
+    motor_right.set_forwards()
+    motor_left.duty(LPWM)
+    motor_right.duty(RPWM)
+    sumL = 0
+    sumR = 0
+    """ Sets both motors forward """
+    for i in range(0, 5):
+        LReading = IR_SensorL.read()
+        RReading = IR_SensorR.read()
+        sumL += LReading
+        sumR += RReading
+        time.sleep(0.01)
+        """ Takes 5 independent measurements, I was worried about outliers throwing the robot off course"""
+    AverageL = sumL/5
+    AverageR = sumR/5
+    print(AverageL, AverageR)
+    if AverageR > AverageL+50:
+        """ Put a buffer here of 50 so the right has to be significantly larger to trigger turning"""
+        if LPWM < 95:
+            LPWM += 5
+        elif RPWM > 65:
+            RPWM += -5
+        else:
+            LPWM = 75
+            RPWM = 73
+            """ using the same master and slave situation """
+    if AverageL > AverageR+50:
+        if LPWM > 65:
+            LPWM += -5
+        elif RPWM < 95:
+            RPWM += 5
+        else:
+            LPWM = 75
+            RPWM = 73
+    else:
+        time.sleep(0.05)
